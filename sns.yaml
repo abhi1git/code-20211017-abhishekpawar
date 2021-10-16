@@ -1,0 +1,58 @@
+Description: This template creates a SNS Topic.
+Parameters:
+  TopicName:
+   Description: Name of the topic to be created
+   Type: String
+
+  DisplayName: 
+   Description: Display Name of the Topic
+   Type: String
+
+
+Resources:
+    AllNotificationsSNSTopic:
+      Type: AWS::SNS::Topic
+      Properties:
+        DisplayName: !Ref DisplayName 
+        TopicName: !Ref TopicName
+        Tags: 
+          - 
+            Key: "Name"
+            Value: !Ref TopicName
+          -
+             Key: "Application Name"
+             Value: CFTtask
+            
+
+    AccessPolicySNS:
+      Type: AWS::SNS::TopicPolicy
+      Properties: 
+        Topics: 
+            - !Ref AllNotificationsSNSTopic
+        PolicyDocument: 
+            Version: '2008-10-17'
+            Id: __default_policy_ID
+            Statement:
+            - Sid: __default_statement_ID
+              Effect: Allow
+              Principal:
+                AWS: "*"
+              Action:
+                - SNS:GetTopicAttributes
+                - SNS:SetTopicAttributes
+                - SNS:AddPermission
+                - SNS:RemovePermission
+                - SNS:DeleteTopic
+                - SNS:Subscribe
+                - SNS:ListSubscriptionsByTopic
+                - SNS:Publish
+                - SNS:Receive
+              Resource: !Ref AllNotificationsSNSTopic
+              Condition:
+                StringEquals:
+                  AWS:SourceOwner: !Ref AWS::AccountId
+
+Outputs:
+  TopicARN:
+    Description: ARN of the Topic
+    Value: !Ref AllNotificationsSNSTopic
