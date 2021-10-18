@@ -8,7 +8,9 @@ Parameters:
    Description: Display Name of the Topic
    Type: String
 
-
+  QueueARN:
+   Description: ARN of SQS Queue
+   Type: String  
 Resources:
     AllNotificationsSNSTopic:
       Type: AWS::SNS::Topic
@@ -51,6 +53,16 @@ Resources:
               Condition:
                 StringEquals:
                   AWS:SourceOwner: !Ref AWS::AccountId
+
+    SNSSubscription:
+      Type: AWS::SNS::Subscription
+      Properties:
+        FilterPolicy: 
+          event_type: 
+            - important
+        Protocol: sqs
+        Endpoint: !Ref QueueARN
+        TopicArn: !Ref AllNotificationsSNSTopic
 
 Outputs:
   TopicARN:

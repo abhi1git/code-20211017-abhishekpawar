@@ -1,0 +1,89 @@
+Description: This template creates a Lambda & an IAM Role for Lambda. 
+Parameters:
+  QueueARN:
+   Description: ARN of the queue
+   Type: String
+  IAMRoleName:
+    Description: Enter Lambda IAM Role Name
+    Type: String
+  LambdaFunctionName:
+    Description: Enter Lambda Name
+    Type: String  
+Resources:
+#Creates an IAM role for Lambda function.
+  LambdaIAMRole:
+    Type: 'AWS::IAM::Role'
+    Properties:
+      RoleName: !Ref IAMRoleName
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Action:
+              - 'sts:AssumeRole'
+            Effect: Allow
+            Principal:
+              Service:
+                - lambda.amazonaws.com
+      Policies:
+        - PolicyName: cfttask-lambda-policy
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              - Action:
+                  - 'logs:CreateLogGroup'
+                  - 'logs:CreateLogStream'
+                  - 'logs:PutLogEvents'
+                Effect: Allow
+                Resource:
+                  - !Sub arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/*:*
+      ManagedPolicyArns: 
+        - "arn:aws:iam::aws:policy/service-role/AWSLambdaSQSQueueExecutionRole"
+        - "arn:aws:iam::aws:policy/AmazonS3FullAccess"
+      Tags:
+        -
+          Key: "Name"
+          Value: !Ref IAMRoleName
+        -
+          Key: "Application Name"
+          Value: CFTtask
+
+  SQSPutMessageS3Lambda:
+    Type: 'AWS::Lambda::Function'
+    DependsOn: LambdaIAMRole
+    Properties:
+      Code:
+        ZipFile: |
+          from __future__ import print_function
+          import json
+          def lambda_handler(event, context):
+              for record in event['Records']:
+                  print("test")
+                  payload = record["body"]
+                  print(payload)          
+      Description: Receive important messages from SQS & put in to S3
+      FunctionName: !Ref LambdaFunctionName
+      Handler: index.lambda_handler
+      MemorySize: 512
+      Role: !GetAtt LambdaIAMRole.Arn
+      Runtime: python3.7
+      Timeout: 20      
+  
+  LambdaTrigger:
+    Type: AWS::Lambda::EventSourceMapping
+    Properties:
+      Enabled: true
+      EventSourceArn: !Ref QueueARN
+      FunctionName: !Ref SQSPutMessageS3Lambda
+
+#Creates Log Group for the Lambda Function to push logs.
+  LambdaLogGroup:
+    Type: 'AWS::Logs::LogGroup'
+    Properties:
+      LogGroupName: !Sub '/aws/lambda/${LambdaFunctionName}'
+      RetentionInDays: 90
+      
+
+Outputs:
+  IAMRoleArn:
+    Description: IAM Role Arn
+    Value: !GetAtt LambdaIAMRole.Arn

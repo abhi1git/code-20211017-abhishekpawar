@@ -1,0 +1,44 @@
+Description: This template creates a SQS Queue.
+Parameters:
+  QueueName:
+   Description: Name of the queue to be created
+   Type: String
+  TopicName:
+    Description: Name of the Topic
+    Type: String
+
+Resources:
+    ImportantMessagesSQS:
+      Type: AWS::SQS::Queue
+      Properties: 
+        QueueName: !Ref QueueName
+        Tags: 
+          - 
+            Key: "Name"
+            Value: !Ref QueueName
+          -
+             Key: "Application Name"
+             Value: CFTtask
+ 
+    SQSPolicy: 
+      Type: AWS::SQS::QueuePolicy
+      Properties: 
+        Queues: 
+          - !Ref ImportantMessagesSQS
+        PolicyDocument:         
+          Statement: 
+            - 
+              Action: 
+                - "SQS:SendMessage"
+              Effect: "Allow"
+              Resource: !GetAtt ImportantMessagesSQS.Arn
+              Condition:
+                ArnLike:
+                  AWS:SourceArn: !Sub arn:aws:sns:${AWS::Region}:${AWS::AccountId}:${TopicName}
+              Principal:  
+                AWS: "*"       
+      
+Outputs:
+  QueueARN:
+    Description: ARN of the Queue
+    Value: !GetAtt ImportantMessagesSQS.Arn
