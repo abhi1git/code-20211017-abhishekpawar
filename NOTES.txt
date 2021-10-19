@@ -1,0 +1,20 @@
+
+** Efficiency Improvements **
+
+* In this approach each time when a message will be received in SQS it will invoke lambda
+* Also each time a new object file will be created & pushed to S3
+* Thus leading to a lot of Lambda invocations and S3 storage usage
+* Instead we can configure lambda to poll the SQS queue for new messages at a certain frequency
+* Frequency schedule for lambda invocation can be achieved by Cloudwatch Event Schedule
+* Will have to configure more Memory & Timeout values as lots of messages will have to be processed
+* Cloudwatch Alarms can be configured to alert when a certain number of messages go undelivered
+
+
+
+
+** Security Improvements **
+
+* IAM roles should be fine grained
+* Usage of KMS key for encryption of SQS & S3
+* Lambda should be deployed within VPC
+* S3 bucket & bucket policy should not be public unless required

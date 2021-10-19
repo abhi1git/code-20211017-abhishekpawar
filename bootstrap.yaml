@@ -1,0 +1,163 @@
+Description: >
+  This template deploys SNS, SQS, LAMBDA & S3 bucket with versioning & lifecycle enabled
+
+Parameters:  
+  SQSTEMPLATEURL:
+    Description: Enter SQS Template URL
+    Type: String
+    Default: https://<bucket-name>.s3.amazonaws.com/cft-task/sqs.yaml  
+  SNSTEMPLATEURL:
+    Description: Enter SNS Template URL
+    Type: String
+    Default: https://<bucket-name>.s3.amazonaws.com/cft-task/sns.yaml
+  S3TEMPLATEURL:
+    Description: Enter S3 Template URL
+    Type: String
+    Default: https://<bucket-name>.s3.amazonaws.com/cft-task/s3.yaml
+  LAMBDATEMPLATEURL:
+    Description: Enter SNS Template URL
+    Type: String
+    Default: https://<bucket-name>.s3.amazonaws.com/cft-task/lambda.yaml        
+  QueueName: 
+   Description: Name of the Queue
+   Type: String
+   Default: imp-msg-queue
+  TopicName:
+   Description: Name of the topic to be created
+   Type: String
+   Default: all-notifications-topic
+  DisplayName: 
+   Description: Display Name of the Topic
+   Type: String
+   Default: all-notifications-topic
+  IAMRoleName:
+    Description: Enter Lambda IAM Role Name
+    Type: String
+    Default: sqs-lambda-s3-role
+  LambdaFunctionName:
+    Description: Enter Lambda Name
+    Type: String
+    Default: sqs-put-message-s3-lambda
+  BucketName:
+    Description: Enter S3 Bucket Name
+    Type: String
+    Default: sqs-imp-msgs-18102021
+           
+Resources:        
+
+  SQS:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: !Ref SQSTEMPLATEURL
+      Parameters:
+        QueueName: !Ref QueueName
+        TopicName: !Ref TopicName        
+
+  SNS:
+    DependsOn: SQS
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: !Ref SNSTEMPLATEURL
+      Parameters:
+        TopicName: !Ref TopicName
+        QueueARN: !GetAtt SQS.Outputs.QueueARN
+        DisplayName: !Ref DisplayName
+
+  S3:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: !Ref S3TEMPLATEURL
+      Parameters:
+        BucketName: !Ref BucketName
+
+  LAMBDA:
+    DependsOn:
+      - SQS
+      - S3
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: !Ref LAMBDATEMPLATEURL
+      Parameters:
+        IAMRoleName: !Ref IAMRoleName
+        LambdaFunctionName: !Ref LambdaFunctionName
+        QueueARN: !GetAtt SQS.Outputs.QueueARN
+        BucketName: !Ref BucketName
+  # INITIATORLAMBDA:
+  #   Type: AWS::CloudFormation::Stack
+  #   DependsOn: 
+  #     - AUTHORIZER
+  #     - SECRET
+  #     - STATEMACHINE
+  #     - ALB          
+  #   Properties:
+  #     TemplateURL: !Ref INITIATORLAMBDATEMPLATEURL
+  #     Parameters:
+  #       lambdaFunctionName: !Ref InitiatorLambdaFunctionName
+  #       PollerLambdaFunctionName: !Ref PollerLambdaFunctionName        
+  #       APIID: !GetAtt APIGATEWAY.Outputs.APIID
+  #       RootResourceId: !GetAtt APIGATEWAY.Outputs.RootResourceId
+  #       AuthorizerId: !GetAtt AUTHORIZER.Outputs.AuthorizerId
+  #       S3BucketName: !Ref S3BucketName
+  #       InitiatorLambdaS3Key: !Ref InitiatorLambdaS3Key
+  #       SecretName: !GetAtt SECRET.Outputs.SECRETNAME
+  #       StateMachineARN: !GetAtt STATEMACHINE.Outputs.StateMachineARN
+  #       LambdaIAMRoleArn: !GetAtt LAMBDAROLES.Outputs.LambdaIAMRoleArn
+  #       UILoadBalancerUrl: !GetAtt ALB.Outputs.UILoadBalancerUrl        
+  #       InitiatorLambdaSecurityGroup: !Join 
+  #         - ','
+  #         - !Ref LambdaSecurityGroup
+  #       PrivateSubnets: !Join 
+  #         - ','
+  #         - - !Ref PrivateSubnet1ID
+  #           - !Ref PrivateSubnet2ID
+
+  # POLLERLAMBDA:
+  #   Type: AWS::CloudFormation::Stack
+  #   DependsOn: 
+  #     - AUTHORIZER
+  #     - SECRET
+  #     - STATEMACHINE
+  #     - ALB         
+  #   Properties:
+  #     TemplateURL: !Ref POLLERLAMBDATEMPLATEURL
+  #     Parameters:
+  #       lambdaFunctionName: !Ref PollerLambdaFunctionName
+  #       TaskTokenLambdaFunctionName: !Ref TaskTokenLambdaFunctionName
+  #       APIID: !GetAtt APIGATEWAY.Outputs.APIID
+  #       RootResourceId: !GetAtt APIGATEWAY.Outputs.RootResourceId
+  #       AuthorizerId: !GetAtt AUTHORIZER.Outputs.AuthorizerId
+  #       S3BucketName: !Ref S3BucketName
+  #       PollerLambdaS3Key: !Ref PollerLambdaS3Key
+  #       SecretName: !GetAtt SECRET.Outputs.SECRETNAME
+  #       StateMachineARN: !GetAtt STATEMACHINE.Outputs.StateMachineARN
+  #       LambdaIAMRoleArn: !GetAtt LAMBDAROLES.Outputs.LambdaIAMRoleArn
+  #       UILoadBalancerUrl: !GetAtt ALB.Outputs.UILoadBalancerUrl                        
+  #       PollerLambdaSecurityGroup: !Join 
+  #         - ','
+  #         - !Ref LambdaSecurityGroup
+  #       PrivateSubnets: !Join 
+  #         - ','
+  #         - - !Ref PrivateSubnet1ID
+  #           - !Ref PrivateSubnet2ID
+
+  # TASKTOKENFROMSTEPLAMBDA:
+  #   Type: AWS::CloudFormation::Stack
+  #   DependsOn: 
+  #     - AUTHORIZER
+  #     - SECRET
+  #     - STATEMACHINE   
+  #   Properties:
+  #     TemplateURL: !Ref TASKTOKENFROMSTEPLAMBDATEMPLATEURL
+  #     Parameters:
+  #       lambdaFunctionName: !Ref TaskTokenLambdaFunctionName
+  #       S3BucketName: !Ref S3BucketName
+  #       TaskTokenFromStepLambdaS3Key: !Ref TaskTokenFromStepLambdaS3Key
+  #       SecretName: !GetAtt SECRET.Outputs.SECRETNAME
+  #       LambdaIAMRoleArn: !GetAtt LAMBDAROLES.Outputs.LambdaIAMRoleArn        
+  #       TaskTokenFromStepLambdaSecurityGroup: !Join 
+  #         - ','
+  #         - !Ref LambdaSecurityGroup
+  #       PrivateSubnets: !Join 
+  #         - ','
+  #         - - !Ref PrivateSubnet1ID
+  #           - !Ref PrivateSubnet2ID

@@ -1,0 +1,45 @@
+Description: This template creates a S3 bucket.
+Parameters:
+  BucketName:
+    Type: String
+    Description: Bucket Name to store message files
+
+Resources:
+  MessageS3Bucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      AccessControl: Private
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: True
+        BlockPublicPolicy: True
+        IgnorePublicAcls: True
+        RestrictPublicBuckets: True
+      VersioningConfiguration:
+        Status: Enabled 
+      BucketName: !Ref BucketName
+      LifecycleConfiguration:
+        Rules: 
+          - Id: Rule for messages
+            Status: Enabled
+            Transitions:
+              - TransitionInDays: 30
+                StorageClass: STANDARD_IA
+              - TransitionInDays: 90
+                StorageClass: GLACIER
+            ExpirationInDays: 365
+      Tags: 
+          - 
+            Key: "Name"
+            Value: !Ref BucketName
+          -
+             Key: "Application Name"
+             Value: CFTtask
+                
+
+Outputs:
+  ResourceName:
+    Description: Returns the resource name.
+    Value: !Ref MessageS3Bucket
+  Arn:
+    Description: returns ARN of specified bucket  
+    Value: MessageS3Bucket.Arn

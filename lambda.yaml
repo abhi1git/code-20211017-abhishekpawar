@@ -8,7 +8,10 @@ Parameters:
     Type: String
   LambdaFunctionName:
     Description: Enter Lambda Name
-    Type: String  
+    Type: String
+  BucketName:
+    Type: String
+    Description: Bucket Name to store message files
 Resources:
 #Creates an IAM role for Lambda function.
   LambdaIAMRole:
@@ -53,15 +56,29 @@ Resources:
     Properties:
       Code:
         ZipFile: |
-          from __future__ import print_function
           import json
+          import boto3
+          import os
+          import time
           def lambda_handler(event, context):
-              for record in event['Records']:
-                  print("test")
-                  payload = record["body"]
-                  print(payload)          
+              result_string = ""
+              epochtime = int(time.time())
+              for record in event.get("Records",[]):
+                body = record.get("body",{})
+                string_body = json.dumps(body)
+                result_string = result_string + string_body + "\n"
+              encoded_string = result_string.encode("utf-8")
+              bucket_name = os.environ["BUCKET_NAME"]
+              file_name = "message-body.txt"
+              s3_path = str(epochtime)+"/"+ file_name
+              s3 = boto3.resource("s3")
+              s3.Bucket(bucket_name).put_object(Key=s3_path, Body=encoded_string)
+              print("Message file pushed to S3")          
       Description: Receive important messages from SQS & put in to S3
       FunctionName: !Ref LambdaFunctionName
+      Environment:
+        Variables:
+          BUCKET_NAME: !Ref BucketName      
       Handler: index.lambda_handler
       MemorySize: 512
       Role: !GetAtt LambdaIAMRole.Arn
@@ -81,7 +98,6 @@ Resources:
     Properties:
       LogGroupName: !Sub '/aws/lambda/${LambdaFunctionName}'
       RetentionInDays: 90
-      
 
 Outputs:
   IAMRoleArn:
